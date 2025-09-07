@@ -1,0 +1,44 @@
+#!/usr/bin/env expect
+
+# === Configuration ===
+set timeout 30
+set user $env(USER)
+set host "lxplus.cern.ch"
+set port "22"
+set subnets "0/0"
+set log_enabled 1
+
+log_user $log_enabled
+
+# === Check TOTP environment variable ===
+if {![info exists env(TOTP_PASS)]} {
+    send_user "\n[ERROR] Environment variable TOTP_PASS is not set.\n"
+    exit 1
+}
+
+# === Generate OTP ===
+set otp [exec totp-cli g cern lxplus]
+
+# === Use a separate Kerberos ticket cache per user ===
+set krb5cc "/tmp/krb5cc_${user}_lxplus"
+set env(KRB5CCNAME) $krb5cc
+
+# === Step 1: refresh Kerberos ticket ===
+spawn env KRB5CCNAME=$krb5cc kinit ${user}@CERN.ch
+expect eof
+
+# === Step 2: run sshuttle with Kerberos auth ===
+spawn env KRB5CCNAME=$krb5cc sshuttle --dns -vr $user@$host:$port $subnets --ssh-cmd "ssh -K"
+
+# === Step 3: handle OTP prompt ===
+expect {
+    -re "(?i)verification code|otp|token:" {
+        send "$otp\r"
+        exp_continue
+    }
+    timeout {
+        send_user "\n[ERROR] Timed out waiting for OTP prompt.\n"
+        exit 1
+    }
+    eof
+}
