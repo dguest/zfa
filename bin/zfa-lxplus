@@ -1,18 +1,36 @@
 #!/usr/bin/env expect
 
 # === Configuration ===
-set timeout 30
+set timeout 15
 set user $env(USER)
-set host "lxplus.cern.ch"
+set host "lxplus-testing.cern.ch"
 set port "22"
 set subnets "0/0"
-set log_enabled 1
+set log_enabled 0
+set sudo_pass_file "$env(HOME)/.sudopass"
+set ssh_pass_file "$env(HOME)/.lxpluspass"
 
 log_user $log_enabled
 
+# === Check sudo password file ===
+if {![file exists $sudo_pass_file]} {
+    send_user "\nSudo password file $sudo_pass_file does not exist.\n"
+    exit 1
+}
+
+# === Check SSH password file ===
+if {![file exists $ssh_pass_file]} {
+    send_user "\nSSH password file $ssh_pass_file does not exist.\n"
+    exit 1
+}
+
+# === Read passwords from files ===
+set sudo_pass [string trim [read [open $sudo_pass_file]]]
+set ssh_pass  [string trim [read [open $ssh_pass_file]]]
+
 # === Check TOTP environment variable ===
 if {![info exists env(TOTP_PASS)]} {
-    send_user "\n[ERROR] Environment variable TOTP_PASS is not set.\n"
+    send_user "\nTOTP_PASS environment variable is not set.\n"
     exit 1
 }
 
@@ -23,22 +41,46 @@ set otp [exec totp-cli g cern lxplus]
 set krb5cc "/tmp/krb5cc_${user}_lxplus"
 set env(KRB5CCNAME) $krb5cc
 
-# === Step 1: refresh Kerberos ticket ===
+# === Step 1: refresh Kerberos ticket, allow interactive password if needed ===
 spawn env KRB5CCNAME=$krb5cc kinit ${user}@CERN.ch
-expect eof
-
-# === Step 2: run sshuttle with Kerberos auth ===
-spawn env KRB5CCNAME=$krb5cc sshuttle --dns -vr $user@$host:$port $subnets --ssh-cmd "ssh -K"
-
-# === Step 3: handle OTP prompt ===
 expect {
-    -re "(?i)verification code|otp|token:" {
-        send "$otp\r"
+    -re "(?i)password.*:" {
+        send_user "\nEnter your Kerberos password: "
+        stty -echo
+        expect_user -re "(.*)\n"
+        stty echo
+        send "$expect_out(1,string)\r"
         exp_continue
-    }
-    timeout {
-        send_user "\n[ERROR] Timed out waiting for OTP prompt.\n"
-        exit 1
     }
     eof
 }
+
+# === Step 2: run sshuttle (sudo + SSH password handled automatically) ===
+spawn env KRB5CCNAME=$krb5cc sshuttle --dns -r $user@$host:$port $subnets --ssh-cmd "ssh -K"
+
+# === Step 3: handle prompts ===
+expect {
+  -re ".*sudo.*assword.*:" {
+    send "$sudo_pass\r"
+    send_user "sent sudo password\n"
+    exp_continue
+  }
+  -re ".*lxplus.*Password:" {
+    send "$ssh_pass\r"
+    send_user "sent lxplus password\n"
+    exp_continue
+  }
+  -re ".*Your 2nd factor.*:" {
+    send "$otp\r"
+    send_user "sent 2FA\n"
+  }
+  timeout {
+    send_user "\nTimed out waiting for prompt.\n"
+    exit 1
+  }
+}
+
+# Step 4: keep the session alive
+set timeout -1
+send_user "\nTunnel established successfully. Session is now interactive.\n"
+interact
