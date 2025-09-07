@@ -37,12 +37,8 @@ if {![info exists env(TOTP_PASS)]} {
 # === Generate OTP ===
 set otp [exec totp-cli g cern lxplus]
 
-# === Use a separate Kerberos ticket cache per user ===
-set krb5cc "/tmp/krb5cc_${user}_lxplus"
-set env(KRB5CCNAME) $krb5cc
-
 # === Step 1: refresh Kerberos ticket, allow interactive password if needed ===
-spawn env KRB5CCNAME=$krb5cc kinit ${user}@CERN.ch
+spawn kinit ${user}@CERN.ch
 expect {
     -re "(?i)password.*:" {
         send_user "\nEnter your Kerberos password: "
@@ -56,7 +52,7 @@ expect {
 }
 
 # === Step 2: run sshuttle (sudo + SSH password handled automatically) ===
-spawn env KRB5CCNAME=$krb5cc sshuttle --dns -r $user@$host:$port $subnets --ssh-cmd "ssh -K"
+spawn sshuttle --dns -r $user@$host:$port $subnets --ssh-cmd "ssh -K"
 
 # === Step 3: handle prompts ===
 expect {
