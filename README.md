@@ -1,16 +1,19 @@
 Zero-factor Authentication
 ==========================
 
-Automates connecting to `lxplus.cern.ch` via `sshuttle` with:
+Automates connecting to `lxplus` via `sshuttle` with:
 
 * Kerberos authentication (`kinit`)
-* Local sudo password for sshuttle
-* SSH password for lxplus
 * One-time password (2FA) via `totp-cli`
-* DNS tunneling
-* Persistent interactive session
 
 ---
+
+## Requirements
+
+- **sshuttle** installed
+- **Expect** installed
+- **Kerberos client** (`kinit`) configured
+- **TOTP generator** (`totp-cli`) installed
 
 ## Setup
 
