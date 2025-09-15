@@ -5,7 +5,6 @@ set timeout 15
 set user $env(USER)
 set host "lxplus-testing.cern.ch"
 set port "22"
-set subnets "0/0"
 set log_enabled 0
 set sudo_pass_file "$env(HOME)/.sudopass"
 set ssh_pass_file "$env(HOME)/.lxpluspass"
@@ -52,7 +51,7 @@ expect {
 }
 
 # === Step 2: run sshuttle (sudo + SSH password handled automatically) ===
-spawn sshuttle --dns -r $user@$host:$port $subnets --ssh-cmd "ssh -K"
+spawn sshuttle --dns -vr $user@$host:$port 137.138.0.0/16 128.141.0.0/16 128.142.0.0/16 188.184.0.0/15 --ssh-cmd "ssh -K"
 
 # === Step 3: handle prompts ===
 expect {
