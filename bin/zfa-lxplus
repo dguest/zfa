@@ -3,7 +3,7 @@
 # === Configuration ===
 set timeout 15
 set user $env(USER)
-set host "lxplus-testing.cern.ch"
+set host "lxplus.cern.ch"
 set port "22"
 set log_enabled 0
 set sudo_pass_file "$env(HOME)/.sudopass"
