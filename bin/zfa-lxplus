@@ -36,22 +36,8 @@ if {![info exists env(TOTP_PASS)]} {
 # === Generate OTP ===
 set otp [exec totp-cli g cern lxplus]
 
-# === Step 1: refresh Kerberos ticket, allow interactive password if needed ===
-spawn kinit ${user}@CERN.ch
-expect {
-    -re "(?i)password.*:" {
-        send_user "\nEnter your Kerberos password: "
-        stty -echo
-        expect_user -re "(.*)\n"
-        stty echo
-        send "$expect_out(1,string)\r"
-        exp_continue
-    }
-    eof
-}
-
 # === Step 2: run sshuttle (sudo + SSH password handled automatically) ===
-spawn sshuttle --dns -vr $user@$host:$port 137.138.0.0/16 128.141.0.0/16 128.142.0.0/16 188.184.0.0/15 --ssh-cmd "ssh -K"
+spawn sshuttle --dns -vr $user@$host:$port 137.138.0.0/16 128.141.0.0/16 128.142.0.0/16 188.184.0.0/15 194.12.128.0/18 --ssh-cmd "ssh -K"
 
 # === Step 3: handle prompts ===
 expect {

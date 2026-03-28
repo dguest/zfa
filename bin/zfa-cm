@@ -1,0 +1,46 @@
+#!/usr/bin/env expect
+
+set user $env(USER)
+set host "lxplus.cern.ch"
+set control_path "$env(HOME)/.ssh/cm-$user@$host:22"
+
+# Check if control master already running
+if {[file exists $control_path]} {
+    send_user "Control master already running.\n"
+    exit 0
+}
+
+set ssh_pass_file "$env(HOME)/.lxpluspass"
+if {![file exists $ssh_pass_file]} {
+    send_user "SSH password file $ssh_pass_file does not exist.\n"
+    exit 1
+}
+set ssh_pass [string trim [read [open $ssh_pass_file]]]
+
+set otp [exec totp-cli g cern lxplus]
+
+spawn ssh -M -N \
+    -o ControlPath=$control_path \
+    -o ControlPersist=8h \
+    -o GSSAPIAuthentication=yes \
+    -o GSSAPIDelegateCredentials=yes \
+    $user@$host
+
+expect {
+    -re ".*assword.*:" {
+        send "$ssh_pass\r"
+        exp_continue
+    }
+    -re ".*2nd factor.*:" {
+        send "$otp\r"
+        send_user "Control master established.\n"
+    }
+    timeout {
+        send_user "Timed out.\n"
+        exit 1
+    }
+}
+
+# Detach and background
+set timeout -1
+interact
