@@ -19,7 +19,7 @@ set ssh_pass [string trim [read [open $ssh_pass_file]]]
 
 set otp [exec totp-cli g cern lxplus]
 
-spawn ssh -M -N \
+spawn ssh -fNM \
     -o ControlPath=$control_path \
     -o ControlPersist=8h \
     -o GSSAPIAuthentication=yes \
@@ -42,5 +42,4 @@ expect {
 }
 
 # Detach and background
-set timeout -1
-interact
+expect eof
