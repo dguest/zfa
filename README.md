@@ -1,13 +1,15 @@
 Zero-factor Authentication
 ==========================
 
+**TL;DR:** Set this up and you won't have to enter TFA keys.
+
 Two Factor Authentication (TFA) is a lot
 of things: it's cool, it's ubiquitous, it's practically
 unhackable. It's like having Fort Knox in your computer and your
 computer surrounded by landmines. Who wouldn't want that?
 
 It turns out everyone wouldn't want that. TFA is a raging pain in the
-ass. What was wrong with good-ol--ssh-keys? Do you actually know
+ass. What was wrong with good ol' ssh keys? Do you actually know
 anyone who had their account compromised before TFA? This
 overcomplicated setup is just begging for someone to come up with a
 workaround far less secure than what we were doing before.
@@ -23,7 +25,7 @@ I didn't warn you.
 ---
 
 
-[^1]: I do care about security. If you can think of an obvious attack vector please just raise an issue or figure out another way to contact me.
+[^1]: I do care about security, and you should too. But adding repetitive user interaction to a system increases the risk of phishing and poorly conceived workarounds. While an ssh-only approach would be more secure, automation is the next best thing. That said, if you can think of an obvious attack vector please just raise an issue or figure out another way to contact me.
 
 This repo contains some scripts to automate connecting to
 `lxplus`. The minimum things you'll need are:
@@ -39,16 +41,14 @@ plain text, naturally) for extra sheen.
 
 ---
 
-## Method 1 Requirements
+## Common setup
 
-Seriously don't use this method, skip to method 2 (which will also
-tell you to come back here; if you can't read a convoluted manual you
-probably shouldn't be using this).
+### Requirements
 
-- **sshuttle** installed (unless you're using method 2)
 - **Expect** installed
 - **Kerberos client** (`kinit`) configured
 - **TOTP generator** (`totp-cli`) installed
+
 
 ### Setup
 
@@ -62,13 +62,9 @@ cd <repo-directory>
 2. **Create password files** (permissions must be 600):
 
 ```bash
-echo "your_sudo_password" > ~/.sudopass
 echo "your_ssh_password" > ~/.lxpluspass
-chmod 600 ~/.sudopass ~/.lxpluspass
+chmod 600 ~/.lxpluspass
 ```
-
-(note that you don't need the `.sudopass` for method 2 and shouldn't
-need it for method 1)
 
 3. **Store your token in `totp-cli`
 
@@ -81,7 +77,28 @@ prompted.
 export TOTP_PASS="your_totp_seed_here"
 ```
 
----
+
+## Method 1 Requirements
+
+Seriously don't use this method, skip to method 2 (which will also
+tell you to come back here; if you can't read a convoluted manual you
+probably shouldn't be using this).
+
+### Additional requirements
+
+- **sshuttle** installed (unless you're using method 2)
+
+### Setup
+
+Create root password file (permissions must be 600):
+
+```bash
+echo "your_sudo_password" > ~/.sudopass
+chmod 600 ~/.sudopass
+```
+
+(note that you shouldn't need the `.sudopass`, I just can't get
+sshuttle to work without it)
 
 ### Usage
 
@@ -115,8 +132,6 @@ Tunnel established successfully. Session is now interactive.
 
 ## Method 2: Control Master (recommended)
 
-Setup like method 1, but you don't need `sshuttle`.
-
 You'll also need something like this in your `.ssh/config`:
 
 ```
@@ -136,3 +151,9 @@ host lxplus*.cern.ch lxplus
 Then run the `zfa-cm` script. It will launch `ssh` in the
 background. Note that it might stick around for a while. Find any
 orphaned remnants with `pgrep -l ssh` and kill them with `pkill`.
+
+## Method 3: Coming Soon!
+
+I figured out how to write this all as a 150 line python script, with
+no dependencies on expect or this totp tool. I'll test it sometime and
+then update this.
